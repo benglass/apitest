@@ -20,10 +20,18 @@ if ($apiKey !== $submittedApiKey) {
     throw new \LogicException('Bad api key');
 }
 
-// Remove the signature from the url and verify it
-$verifyUrl = substr($url, 0, strpos($url, '&signature='));
+// Strip the query string off the url
+$endpoint = substr($url, 0, strpos($url, $parts['query']) - 1);
 
-$signature = base64_encode(hash_hmac('sha256', $verifyUrl, $secretKey));
+// Remove signaure and sort query parts by case insensitively by field name
+$signatureQueryParts = $query;
+unset($signatureQueryParts['signature']);
+ksort($signatureQueryParts, SORT_STRING | SORT_FLAG_CASE);
+
+// Signature url is lowercased, sorted url
+$signatureUrl = strtolower($endpoint.'?'.http_build_query($signatureQueryParts));
+
+$signature = base64_encode(hash_hmac('sha256', $signatureUrl, $secretKey));
 $submittedSignature = $query['signature'];
 
 if ($signature === $submittedSignature) {
